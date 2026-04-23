@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\Guest;
+use App\Http\Requests\ReservationRequest;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -32,33 +33,9 @@ class ReservationController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(ReservationRequest $request)
     {
-        $validated = $request->validate([
-            'guest_id' => 'required|exists:guests,id',
-            'room_id' => 'required|exists:rooms,id',
-            'check_in_date' => 'required|date|after_or_equal:today',
-            'check_out_date' => 'required|date|after:check_in_date',
-            'status' => 'required|in:pending,confirmed,completed,cancelled',
-            'special_requests' => 'nullable|string'
-        ]);
-
-        // Check for double booking
-        $conflictingReservation = Reservation::where('room_id', $validated['room_id'])
-            ->where('status', '!=', 'cancelled')
-            ->where(function($query) use ($validated) {
-                $query->whereBetween('check_in_date', [$validated['check_in_date'], $validated['check_out_date']])
-                      ->orWhereBetween('check_out_date', [$validated['check_in_date'], $validated['check_out_date']])
-                      ->orWhere(function($q) use ($validated) {
-                          $q->where('check_in_date', '<=', $validated['check_in_date'])
-                            ->where('check_out_date', '>=', $validated['check_out_date']);
-                      });
-            })
-            ->first();
-
-        if ($conflictingReservation) {
-            return redirect()->back()->withInput()->with('error', 'This room is already booked for the selected dates. Please choose different dates or another room.');
-        }
+        $validated = $request->validated();
 
         // Calculate nights and total amount
         $checkIn = Carbon::parse($validated['check_in_date']);
@@ -102,34 +79,9 @@ class ReservationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Reservation $reservation)
+    public function update(ReservationRequest $request, Reservation $reservation)
     {
-        $validated = $request->validate([
-            'guest_id' => 'required|exists:guests,id',
-            'room_id' => 'required|exists:rooms,id',
-            'check_in_date' => 'required|date|after_or_equal:today',
-            'check_out_date' => 'required|date|after:check_in_date',
-            'status' => 'required|in:pending,confirmed,completed,cancelled',
-            'special_requests' => 'nullable|string'
-        ]);
-
-        // Check for double booking (exclude current reservation)
-        $conflictingReservation = Reservation::where('room_id', $validated['room_id'])
-            ->where('id', '!=', $reservation->id)
-            ->where('status', '!=', 'cancelled')
-            ->where(function($query) use ($validated) {
-                $query->whereBetween('check_in_date', [$validated['check_in_date'], $validated['check_out_date']])
-                      ->orWhereBetween('check_out_date', [$validated['check_in_date'], $validated['check_out_date']])
-                      ->orWhere(function($q) use ($validated) {
-                          $q->where('check_in_date', '<=', $validated['check_in_date'])
-                            ->where('check_out_date', '>=', $validated['check_out_date']);
-                      });
-            })
-            ->first();
-
-        if ($conflictingReservation) {
-            return redirect()->back()->withInput()->with('error', 'This room is already booked for the selected dates. Please choose different dates or another room.');
-        }
+        $validated = $request->validated();
 
         // Calculate nights and total amount
         $checkIn = Carbon::parse($validated['check_in_date']);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Room;
+use App\Http\Requests\RoomRequest;
 use Illuminate\Http\Request;
 
 class RoomController extends Controller
@@ -27,18 +28,9 @@ class RoomController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(RoomRequest $request)
     {
-        $validated = $request->validate([
-            'room_number' => 'required|string|max:10|unique:rooms',
-            'room_type' => 'required|in:Single,Double,Suite,Family',
-            'price_per_night' => 'required|numeric|min:0',
-            'capacity' => 'required|integer|min:1|max:10',
-            'status' => 'required|in:available,occupied,maintenance',
-            'description' => 'nullable|string'
-        ]);
-
-        Room::create($validated);
+        Room::create($request->validated());
         return redirect()->route('rooms.index')->with('success', 'Room created successfully.');
     }
 
@@ -61,18 +53,9 @@ class RoomController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Room $room)
+    public function update(RoomRequest $request, Room $room)
     {
-        $validated = $request->validate([
-            'room_number' => 'required|string|max:10|unique:rooms,room_number,' . $room->id,
-            'room_type' => 'required|in:Single,Double,Suite,Family',
-            'price_per_night' => 'required|numeric|min:0',
-            'capacity' => 'required|integer|min:1|max:10',
-            'status' => 'required|in:available,occupied,maintenance',
-            'description' => 'nullable|string'
-        ]);
-
-        $room->update($validated);
+        $room->update($request->validated());
         return redirect()->route('rooms.index')->with('success', 'Room updated successfully.');
     }
 
